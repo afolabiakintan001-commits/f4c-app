@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
 import Link from 'next/link';
@@ -9,9 +9,10 @@ import Link from 'next/link';
 export default function AssetDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const router = useRouter();
 
   const [asset, setAsset] = useState<any>(null);
+  const [creator, setCreator] = useState<any>(null);
+  const [relatedAssets, setRelatedAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -19,15 +20,28 @@ export default function AssetDetailPage() {
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       try {
+        // Fetch asset and join creator
         const { data: assetData, error: fetchError } = await supabase
           .from('images')
-          .select('*')
+          .select('*, profiles(*)')
           .eq('id', id)
           .single();
 
         if (fetchError) throw fetchError;
         setAsset(assetData);
+        setCreator(assetData.profiles);
+
+        // Fetch related assets
+        const { data: relatedData } = await supabase
+          .from('images')
+          .select('*')
+          .eq('category', assetData.category)
+          .neq('id', id)
+          .limit(4);
+        setRelatedAssets(relatedData || []);
+
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -53,67 +67,84 @@ export default function AssetDetailPage() {
     window.open(asset.master_file_url, '_blank');
   };
 
-  if (loading) return <div className="mono" style={{ padding: '40px' }}>[ LOADING ASSET... ]</div>;
-  if (error) return <div className="mono" style={{ padding: '40px' }}>[ ERROR: {error} ]</div>;
-  if (!asset) return <div className="mono" style={{ padding: '40px' }}>[ ASSET NOT FOUND ]</div>;
+  if (loading) return <div className="mono" style={{ padding: '60px', textAlign: 'center' }}>[ INITIALIZING ASSET INSPECTOR... ]</div>;
+  if (error) return <div className="mono" style={{ padding: '60px', textAlign: 'center' }}>[ ERROR: {error} ]</div>;
+  if (!asset) return <div className="mono" style={{ padding: '60px', textAlign: 'center' }}>[ ASSET NOT FOUND ]</div>;
 
   return (
-    <>
-      <div style={{ maxWidth: '1000px', margin: '60px auto', padding: '0 20px' }} className="mono">
-        <Link href="/" style={{ color: '#71716b', fontSize: '11px', textDecoration: 'none', marginBottom: '20px', display: 'inline-block' }}>
+    <div className="wrap" style={{ marginTop: '32px' }}>
+      {/* Navigation Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <Link href="/" className="link-plain mono">
           [ ← RETURN TO VAULT INDEX ]
         </Link>
+        <div className="mono" style={{ fontSize: '13px', border: '1px solid #dcdcd7', padding: '6px 12px' }}>
+          [ ASSET_CODE: {asset.id.slice(0, 8).toUpperCase()} ]
+        </div>
+      </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '40px', marginTop: '20px' }}>
-          {/* Left Column: Preview */}
-          <div style={{ border: '2px solid #0a0a0a', padding: '4px', boxShadow: '8px 8px 0px #0a0a0a', background: '#fff' }}>
-             <img src={asset.preview_url} alt={asset.title} style={{ width: '100%', display: 'block' }} />
+      {/* Two-Column Asset Inspector Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '48px', marginBottom: '80px' }}>
+        
+        {/* Left Column: Preview */}
+        <div style={{ 
+          border: '1px solid #dcdcd7', 
+          background: '#f1f1ef', 
+          padding: '4px',
+          position: 'relative'
+        }}>
+          <img src={asset.preview_url} alt={asset.title} style={{ width: '100%', display: 'block', height: 'auto' }} />
+          <div style={{ position: 'absolute', top: '16px', left: '16px', background: '#0a0a0a', color: '#fff', padding: '4px 8px', fontSize: '11px', fontFamily: 'monospace' }}>
+            [ {asset.id.slice(0, 8).toUpperCase()} ]
+          </div>
+          <div style={{ position: 'absolute', top: '16px', right: '16px', background: '#fff', border: '1px solid #dcdcd7', padding: '4px 8px', fontSize: '11px', fontFamily: 'monospace' }}>
+            {asset.access_type}
+          </div>
+          <button style={{ position: 'absolute', bottom: '16px', right: '16px', background: '#fff', border: '1px solid #0a0a0a', padding: '6px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+            [ FULL_VIEW ]
+          </button>
+        </div>
+
+        {/* Right Column: Readout */}
+        <div>
+          <h1 style={{ fontFamily: 'Space Grotesk', fontSize: '42px', fontWeight: 600, marginBottom: '24px', lineHeight: 1.1 }}>{asset.title}</h1>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
+            <img src={creator?.avatar_url || '/placeholder.png'} alt="Creator" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+            <span style={{ fontWeight: 600 }}>{creator?.username}</span>
+            <div style={{ width: '6px', height: '6px', background: '#0a0a0a' }} />
           </div>
 
-          {/* Right Column: Ledger */}
-          <div style={{ border: '1px solid #dcdcd7', background: '#fff', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div>
-              <h1 style={{ fontSize: '24px', fontFamily: 'Space Grotesk, sans-serif', margin: '0 0 8px' }}>{asset.title}</h1>
-              <span style={{ fontSize: '11px', color: '#71716b' }}>[ ASSET_ID: {asset.id.slice(0, 8)} ]</span>
-            </div>
+          <div className="readout" style={{ marginBottom: '24px' }}>
+            <div className="readout-title">[ TECHNICAL READOUT ]</div>
+            <div className="readout-row"><span className="k">RESOLUTION</span><span className="v">{asset.resolution || 'N/A'}</span></div>
+            <div className="readout-row"><span className="k">FILE FORMAT</span><span className="v">{asset.file_type}</span></div>
+            <div className="readout-row"><span className="k">ACCESS TYPE</span><span className="v">{asset.access_type}</span></div>
+            <div className="readout-row"><span className="k">PRICE</span><span className="v">{asset.price_gbp > 0 ? `£${asset.price_gbp}` : 'FREE'}</span></div>
+          </div>
 
-            <div style={{ borderTop: '1px solid #dcdcd7', pt: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f1ef' }}>
-                <span style={{ fontSize: '11px', color: '#71716b' }}>CATEGORY</span>
-                <span style={{ fontSize: '11px', fontWeight: 600 }}>{asset.category}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f1ef' }}>
-                <span style={{ fontSize: '11px', color: '#71716b' }}>FORMAT</span>
-                <span style={{ fontSize: '11px', fontWeight: 600 }}>{asset.file_type}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f1ef' }}>
-                <span style={{ fontSize: '11px', color: '#71716b' }}>RESOLUTION</span>
-                <span style={{ fontSize: '11px', fontWeight: 600 }}>{asset.resolution}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f1ef' }}>
-                <span style={{ fontSize: '11px', color: '#71716b' }}>ACCESS</span>
-                <span style={{ fontSize: '11px', fontWeight: 600 }}>{asset.access_type}</span>
-              </div>
-            </div>
-
-            <button 
-              onClick={handleDownload}
-              style={{ 
-                background: '#0a0a0a', 
-                color: '#fff', 
-                padding: '14px', 
-                border: 'none', 
-                cursor: 'pointer', 
-                fontSize: '11px',
-                fontWeight: 700,
-                fontFamily: 'inherit',
-                letterSpacing: '0.5px'
-              }}
-            >
-              [ DOWNLOAD MASTER FILE ]
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button onClick={handleDownload} className="btn-solid" style={{ width: '100%', padding: '14px', cursor: 'pointer' }}>[ DOWNLOAD MASTER FILE ]</button>
+            <button className="btn-outline" style={{ width: '100%', padding: '14px', cursor: 'pointer' }}>[ COPY ASSET LINK ]</button>
           </div>
         </div>
+      </div>
+
+      {/* Related Assets Section */}
+      <h3 style={{ fontFamily: 'monospace', fontSize: '14px', marginBottom: '24px' }}>[ RELATED VAULT ASSETS ]</h3>
+      <div className="contact-sheet">
+        {relatedAssets.map(a => (
+          <div key={a.id} className="frame">
+            <div className="frame-img-wrap">
+              <img src={a.preview_url} alt={a.title} />
+              <div className="frame-code">[ {a.id.slice(0, 4).toUpperCase()} ]</div>
+              <div className="frame-tier">{a.access_type}</div>
+            </div>
+            <div className="frame-caption">
+              <span className="handle">{a.title}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       <AuthModal 
@@ -121,10 +152,9 @@ export default function AssetDetailPage() {
         onClose={() => setIsAuthOpen(false)} 
         onSuccess={() => {
           setIsAuthOpen(false);
-          setCurrentUser(true); // Simplified auth update
           handleDownload();
         }}
       />
-    </>
+    </div>
   );
 }

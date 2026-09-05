@@ -36,7 +36,7 @@ export function Hero() {
         .order('download_count', { ascending: false })
         .limit(1)
         .single();
-      setFeaturedAsset(asset as FeaturedAsset);
+      setFeaturedAsset(asset as unknown as FeaturedAsset);
       setLoading(false);
     };
     fetchData();

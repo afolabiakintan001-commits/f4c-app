@@ -76,7 +76,7 @@ export default function Header() {
             }}>
               F4CREATORS
             </span>
-            <span style={{ fontSize: '10px', color: '#71716b', display: 'none', smDisplay: 'inline' }}>
+            <span style={{ fontSize: '10px', color: '#71716b', display: 'none' }}>
               [ VAULT_INDEX ]
             </span>
           </Link>

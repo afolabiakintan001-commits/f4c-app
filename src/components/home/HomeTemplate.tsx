@@ -17,7 +17,7 @@ export function HomeTemplate() {
         <div className="readout">
           <div className="readout-title">vault status</div>
           <div className="readout-row"><span className="k">files indexed</span><span className="v">12,438</span></div>
-          <div className="readout-row"><span className="k">min. resolution</span><span class="v">4096×2304</span></div>
+          <div className="readout-row"><span className="k">min. resolution</span><span className="v">4096×2304</span></div>
           <div className="readout-row"><span className="k">formats</span><span className="v">PNG · PSD · MOV</span></div>
           <div className="readout-row"><span className="k">watermarks</span><span className="v">0<span className="cursor-blink"></span></span></div>
         </div>
@@ -29,7 +29,7 @@ export function HomeTemplate() {
         <div className="creator-chip"><div className="avatar" style={{backgroundImage:"url(https://picsum.photos/seed/c2/60/60)"}}></div><span className="handle">@driftframes</span><span className="sq-verified"></span></div>
         <div className="creator-chip"><div className="avatar" style={{backgroundImage:"url(https://picsum.photos/seed/c3/60/60)"}}></div><span className="handle">@textureforge</span><span className="sq-verified"></span></div>
         <div className="creator-chip"><div className="avatar" style={{backgroundImage:"url(https://picsum.photos/seed/c4/60/60)"}}></div><span className="handle">@nightcity3d</span><span className="sq-verified"></span></div>
-        <div className="creator-chip"><div className="avatar" style={{backgroundImage:"url(https://picsum.photos/seed/c5/60/60)"}}></div><span className="handle">@filmgrain_k</span><span class="sq-verified"></span></div>
+        <div className="creator-chip"><div className="avatar" style={{backgroundImage:"url(https://picsum.photos/seed/c5/60/60)"}}></div><span className="handle">@filmgrain_k</span><span className="sq-verified"></span></div>
         <div className="creator-chip"><div className="avatar" style={{backgroundImage:"url(https://picsum.photos/seed/c6/60/60)"}}></div><span className="handle">@vaporlens</span><span className="sq-verified"></span></div>
       </div>
 

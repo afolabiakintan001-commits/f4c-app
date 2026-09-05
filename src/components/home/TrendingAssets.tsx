@@ -20,7 +20,7 @@ export function TrendingAssets() {
       setAssets(data?.map(a => ({
         id: a.id,
         url: a.url,
-        author_handle: a.profiles?.username,
+        author_handle: (a.profiles as any)?.username,
         download_count: a.download_count,
         access_type: a.access_type
       })) || []);

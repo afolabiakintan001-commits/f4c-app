@@ -2,171 +2,144 @@
 
 import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 import AuthModal from '@/components/AuthModal';
 
-const BROAD_CATEGORIES = ['Frames & Stills', 'Textures & Overlays', 'Presets & Project Files', '3D & Graphics'];
-
 export default function SubmitPage() {
-  const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(BROAD_CATEGORIES[0]);
-  const [detectedFormat, setDetectedFormat] = useState('UNKNOWN');
-  const [resolution, setResolution] = useState('MASTER FILE');
-  const [rawTags, setRawTags] = useState('');
+  const [category, setCategory] = useState('');
   const [accessType, setAccessType] = useState<'FREE' | 'FULLY_FREE' | 'MONEY'>('FREE');
-  const [priceGbp, setPriceGbp] = useState('0.00');
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [price, setPrice] = useState('0.00');
+  const [tags, setTags] = useState('');
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleFileSelect = (selectedFile: File) => {
-    setFile(selectedFile);
-    const ext = selectedFile.name.split('.').pop()?.toUpperCase() || 'FILE';
-    setDetectedFormat(ext);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    if (selectedFile.type.startsWith('image/')) {
-      const img = new Image();
-      img.src = URL.createObjectURL(selectedFile);
-      img.onload = () => setResolution(`${img.width}×${img.height}`);
-    } else {
-      setResolution('MASTER FILE');
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !title) return alert('Select a master file and provide a title.');
+    if (!file) return;
 
-    // Inline auth check
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setIsAuthOpen(true);
       return;
     }
 
-    await processUpload(user.id);
-  };
-
-  const processUpload = async (userId: string) => {
-    setUploading(true);
-    setUploadProgress('[ INDEXING_TO_VAULT... ]');
-
+    setLoading(true);
     try {
-      // 1. Upload to Storage
-      const fileExt = file!.name.split('.').pop();
-      const filePath = `${userId}/${Date.now()}_${Math.random()}.${fileExt}`;
-      const { error: storageError, data: storageData } = await supabase.storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
         .from('assets')
-        .upload(filePath, file!);
+        .upload(fileName, file);
 
-      if (storageError) throw storageError;
+      if (uploadError) throw uploadError;
 
-      // 2. Get Public URL
-      const { data: { publicUrl } } = supabase.storage.from('assets').getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage
+        .from('assets')
+        .getPublicUrl(fileName);
 
-      // 3. Database Insert
-      const tagsArray = rawTags.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(t => t.length > 0);
-      const { error: dbError } = await supabase.from('images').insert({
-        user_id: userId,
-        title,
-        category,
-        file_type: detectedFormat,
-        tags: tagsArray,
-        preview_url: publicUrl,
-        master_file_url: publicUrl,
-        resolution,
-        access_type: accessType,
-        price_gbp: accessType === 'MONEY' ? parseFloat(priceGbp) : 0,
-      });
+      const { error: dbError } = await supabase
+        .from('images')
+        .insert({
+          user_id: user.id,
+          title,
+          category,
+          file_type: fileExt?.toUpperCase() || 'UNKNOWN',
+          tags: tags.split(',').map(t => t.trim()),
+          preview_url: publicUrl,
+          master_file_url: publicUrl,
+          access_type: accessType,
+          price_gbp: parseFloat(price)
+        });
 
       if (dbError) throw dbError;
-      alert('Asset indexed successfully!');
-      router.push('/');
+
+      alert('[ SUCCESS: ASSET_PUBLISHED_TO_VAULT ]');
     } catch (err: any) {
-      alert(`Upload failed: ${err.message}`);
+      alert(`[ ERROR: ${err.message} ]`);
     } finally {
-      setUploading(false);
-      setUploadProgress(null);
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '640px', margin: '60px auto', padding: '0 20px', fontFamily: 'monospace' }}>
-      <div style={{ border: '1px solid #0a0a0a', padding: '32px', background: '#fff', boxShadow: '6px 6px 0px #0a0a0a' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <span style={{ fontSize: '11px', color: '#71716b' }}>[ INDEX NEW ASSET ]</span>
-          <span style={{ background: '#0a0a0a', color: '#fff', padding: '2px 8px', fontSize: '11px', fontWeight: 700 }}>F4CREATORS</span>
-        </div>
-
-        {/* Drag and Drop Zone */}
-        <div
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]); }}
-          style={{
-            border: isDragging ? '2px dashed #0a0a0a' : '2px dashed #dcdcd7',
-            padding: '40px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            marginBottom: '20px'
-          }}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input type="file" ref={fileInputRef} onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])} style={{ display: 'none' }} />
-          {file ? <span style={{ fontSize: '12px' }}>[ MASTER_FILE_ATTACHED: {file.name} ]</span> : <span style={{ fontSize: '12px' }}>[ DRAG MASTER FILE HERE OR CLICK TO BROWSE ]</span>}
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-           {/* ... Other Fields (Title, Category, Tags, AccessType) ... */}
-           {/* Similar to before, I'll keep the form simple but structured as requested */}
-           <div>
-            <label style={{ display: 'block', fontSize: '11px', color: '#71716b', marginBottom: '6px' }}>ASSET TITLE</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required style={{ border: '1px solid #dcdcd7', padding: '10px', width: '100%', fontFamily: 'monospace' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', color: '#71716b', marginBottom: '6px' }}>BROAD CATEGORY</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ border: '1px solid #dcdcd7', padding: '10px', width: '100%', fontFamily: 'monospace' }}>
-              {BROAD_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', color: '#71716b', marginBottom: '6px' }}>CUSTOM TAGS (COMMA SEPARATED)</label>
-            <input type="text" value={rawTags} onChange={(e) => setRawTags(e.target.value)} style={{ border: '1px solid #dcdcd7', padding: '10px', width: '100%', fontFamily: 'monospace' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', color: '#71716b', marginBottom: '6px' }}>ACCESS TIER</label>
-            <select value={accessType} onChange={(e: any) => setAccessType(e.target.value)} style={{ border: '1px solid #dcdcd7', padding: '10px', width: '100%', fontFamily: 'monospace' }}>
-              <option value="FREE">FREE</option>
-              <option value="FULLY_FREE">FULLY FREE</option>
-              <option value="MONEY">PAID</option>
-            </select>
-          </div>
-          {accessType === 'MONEY' && (
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', color: '#71716b', marginBottom: '6px' }}>PRICE (£ GBP)</label>
-              <input type="number" step="0.50" value={priceGbp} onChange={(e) => setPriceGbp(e.target.value)} style={{ border: '1px solid #dcdcd7', padding: '10px', width: '100%', fontFamily: 'monospace' }} />
-            </div>
-          )}
-
-           <button type="submit" disabled={uploading} style={{ background: '#0a0a0a', color: '#fff', padding: '14px', border: 'none', cursor: 'pointer', fontSize: '12px', fontFamily: 'monospace' }}>
-            {uploading ? uploadProgress : '[ PUBLISH TO F4CREATORS VAULT ]'}
-          </button>
-        </form>
+    <div className="max-w-[1440px] mx-auto px-8 py-12 mono">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-[14px] h-[14px] bg-black" />
+        <h1 className="text-[14px] tracking-tight">[ SUBMIT MASTER FILE TO VAULT ]</h1>
       </div>
+      <h2 className="text-[48px] font-bold mb-2">Host original assets.</h2>
+      <p className="text-[#71716b] mb-12">Untouched by platform compression or watermarks. Verified creators only.</p>
 
-      <AuthModal 
-        isOpen={isAuthOpen} 
-        onClose={() => setIsAuthOpen(false)} 
-        onSuccess={async () => {
-          setIsAuthOpen(false);
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) await processUpload(user.id);
-        }} 
-      />
+      {/* Two-Column Layout */}
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-16">
+        {/* Left Column: Dropzone */}
+        <div className="space-y-6">
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="border border-[#dcdcd7] bg-[#fafaf9] h-[500px] flex items-center justify-center cursor-pointer hover:border-black transition-colors"
+          >
+            {file ? (
+              <div className="text-center p-4">
+                <p className="text-[12px] font-bold">[ {file.name} ]</p>
+                <p className="text-[10px] text-[#71716b]">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+            ) : (
+              <p className="text-[12px] text-[#71716b]">[ DRAG_OR_CLICK_TO_ATTACH ]</p>
+            )}
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+          </div>
+        </div>
+
+        {/* Right Column: Form */}
+        <div className="space-y-8">
+          <div>
+            <label className="text-[11px] text-[#71716b]">ASSET TITLE</label>
+            <input required value={title} onChange={(e) => setTitle(e.target.value)} className="w-full border-b border-[#dcdcd7] py-2 outline-none text-[14px]" placeholder="35mm Film Grain Scan Vol. 1" />
+          </div>
+
+          <div>
+            <label className="text-[11px] text-[#71716b]">CATEGORY</label>
+            <select required value={category} onChange={(e) => setCategory(e.target.value)} className="w-full border-b border-[#dcdcd7] py-2 outline-none text-[14px] bg-transparent">
+              <option value="">SELECT_CATEGORY</option>
+              {['Anime edits', 'Car stills', 'Graphic textures', '4K wallpapers', '3D renders', 'Film frames'].map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] text-[#71716b]">ACCESS TIER</label>
+            <div className="flex gap-4 mt-2">
+              {(['FREE', 'FULLY_FREE', 'MONEY'] as const).map(tier => (
+                <button type="button" key={tier} onClick={() => setAccessType(tier)} className={`px-3 py-1 border text-[11px] ${accessType === tier ? 'bg-black text-white' : ''}`}>
+                  {tier}
+                </button>
+              ))}
+            </div>
+            {accessType === 'MONEY' && <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full border-b border-[#dcdcd7] py-2 outline-none text-[14px] mt-2" placeholder="Price (£)" />}
+          </div>
+
+          <div>
+            <label className="text-[11px] text-[#71716b]">TAGS</label>
+            <input value={tags} onChange={(e) => setTags(e.target.value)} className="w-full border-b border-[#dcdcd7] py-2 outline-none text-[14px]" placeholder="grain, 4k, overlay, png" />
+          </div>
+
+          <button type="submit" disabled={loading} className="bg-black text-white px-6 py-3 text-[12px] font-bold w-full">
+            {loading ? '[ PUBLISHING... ]' : '[ PUBLISH TO VAULT ]'}
+          </button>
+        </div>
+      </form>
+
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={() => { setIsAuthOpen(false); handleSubmit(new Event('submit') as any); }} />
     </div>
   );
 }

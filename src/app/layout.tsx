@@ -1,4 +1,6 @@
+import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
+import './f4c-theme.css';
 
 export const metadata = {
   title: 'F4C — Vault',
@@ -19,7 +21,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }
