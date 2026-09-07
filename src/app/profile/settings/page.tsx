@@ -15,6 +15,9 @@ interface ProfileData {
   is_verified: boolean
 }
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-key';
+
 export default function ProfileSettingsPage() {
   const [profile, setProfile] = useState<ProfileData>({
     primary_handle: '',
@@ -31,10 +34,7 @@ export default function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   useEffect(() => {
     async function loadProfile() {

@@ -40,8 +40,8 @@ export async function POST(req: Request) {
       metadata: {
         userId: userId,
       },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/become-creator/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/become-creator`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
     });
 
     return NextResponse.json({ url: session.url });

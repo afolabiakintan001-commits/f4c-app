@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import AuthModal from '@/components/AuthModal';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
-export default function ProfilePage() {
+function ProfileDashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'UPLOADED' | 'DOWNLOADS' | 'SETTINGS'>('UPLOADED');
   const [assets, setAssets] = useState<any[]>([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get('error'); // Basic query param error handling
 
   useEffect(() => {
     const init = async () => {
@@ -25,7 +29,17 @@ export default function ProfilePage() {
       }
       setLoading(false);
     };
+
+    // Listen for auth state changes, specifically SIGNED_IN to auto-update UI
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        setUser(session?.user ?? null);
+        window.location.reload(); // Refresh to fetch assets
+      }
+    });
+
     init();
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleDelete = async (assetId: string, url: string) => {
@@ -45,7 +59,11 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="mono border border-[#0a0a0a] p-8 text-[14px]">[ ACCESS_DENIED: AUTHENTICATION_REQUIRED ]</div>
+        {errorParam ? (
+            <div className="mono border border-red-600 p-8 text-[14px] text-red-600">[ ERROR: {errorParam.replace(/_/g, ' ')} ]</div>
+        ) : (
+            <div className="mono border border-[#0a0a0a] p-8 text-[14px]">[ ACCESS_DENIED: AUTHENTICATION_REQUIRED ]</div>
+        )}
         <button onClick={() => setIsAuthOpen(true)} className="mono bg-black text-white px-6 py-2 text-[12px]">[ INITIALIZE_LOGIN ]</button>
         <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={() => window.location.reload()} />
       </div>
@@ -118,5 +136,13 @@ export default function ProfilePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="mono p-8">[ INITIALIZING_SESSION... ]</div>}>
+      <ProfileDashboard />
+    </Suspense>
   );
 }

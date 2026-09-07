@@ -1,233 +1,124 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import AssetModal from '@/components/AssetModal';
+import Header from '@/components/Header';
+
+// Types derived from schema
+type AccessType = 'FREE' | 'FULLY_FREE' | 'MONEY';
 
 interface Asset {
   id: string;
   title: string;
-  preview_url: string;
-  master_file_url: string;
-  resolution: string;
   category: string;
-  access_type: 'FREE' | 'FULLY_FREE' | 'MONEY';
-  price_gbp?: number;
-  profiles: {
-    username: string;
-    is_verified: boolean;
-  };
-}
-
-interface Creator {
-  username: string;
-  avatar_url: string;
+  file_type: string;
+  preview_url: string;
+  resolution: string;
+  access_type: AccessType;
+  price_gbp: number | null;
+  created_at: string;
+  tags: string[];
 }
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [creators, setCreators] = useState<Creator[]>([]);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [totalFiles, setTotalFiles] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const CATEGORIES = ['ALL', 'Frames & Stills', 'Textures & Overlays', 'Presets & Project Files', '3D & Graphics'];
 
   useEffect(() => {
-    async function loadData() {
+    async function fetchAssets() {
       setLoading(true);
-
-      // Query live assets joined with profiles
-      let assetQuery = supabase
+      let query = supabase
         .from('images')
-        .select(`
-          id, title, preview_url, resolution, category, access_type, price_gbp,
-          profiles:user_id ( username, is_verified )
-        `);
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (searchTerm) {
-        assetQuery = assetQuery.or(
-          `title.ilike.%${searchTerm}%`
-        );
+      if (activeCategory !== 'ALL') {
+        query = query.eq('category', activeCategory);
       }
 
-      if (activeTab !== 'All') {
-        assetQuery = assetQuery.eq('category', activeTab);
-      }
-
-      const { data: assetData } = await assetQuery
-        .order('created_at', { ascending: false })
-        .limit(24);
-
-      if (assetData) {
-        setAssets(assetData as unknown as Asset[]);
-      }
-
-      // Query total files count
-      const { count } = await supabase
-        .from('images')
-        .select('*', { count: 'exact', head: true });
-
-      setTotalFiles(count || 0);
-
-      // Query top verified creators
-      const { data: creatorData } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .limit(8);
-
-      if (creatorData) {
-        setCreators(creatorData);
-      }
-
+      const { data, error } = await query;
+      if (data) setAssets(data);
       setLoading(false);
     }
+    fetchAssets();
+  }, [activeCategory]);
 
-    loadData();
-  }, [activeTab, searchTerm]);
+  const filteredAssets = assets.filter(asset => 
+    asset.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    asset.file_type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <>
-
-      <header>
-        <div className="wrap header-row">
-          <div className="logo"><span className="mark"></span>F4C</div>
-          <div className="search-shell">
-            <span className="prompt mono">&gt;</span>
-            <input 
-              type="text" 
-              placeholder="search creator handle — any linked platform" 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="nav-right">
-            <a href="/login" className="link-plain">Log in</a>
-            <a href="/become-creator" className="btn-bracket mono">[ become a creator — £5 ]</a>
+    <div style={{ background: '#fdfdfc', minHeight: '100vh', fontFamily: 'monospace' }}>
+      <Header />
+      
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
+        {/* 1. Hero Vault Index Banner */}
+        <div style={{ border: '1px solid #0a0a0a', padding: '32px', marginBottom: '40px', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '32px', marginBottom: '20px', fontWeight: 'bold' }}>[ F4CREATORS VAULT_INDEX ]</h1>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '11px', color: '#71716b', justifyContent: 'center' }}>
+            <span>[ TOTAL_INDEXED: {assets.length} ]</span>
+            <span>[ CATEGORIES: 4 ]</span>
+            <span>[ STATUS: ONLINE ]</span>
           </div>
         </div>
-        <div className="wrap ledger">
-          {['All', 'Frames & Stills', 'Textures & Overlays', 'Presets & Project Files', '3D & Graphics'].map((cat) => (
-            <div
-              key={cat}
-              className={`ledger-item ${activeTab === cat ? 'active' : ''}`}
-              onClick={() => setActiveTab(cat)}
-            >
-              {cat}
-            </div>
-          ))}
-        </div>
-      </header>
 
-      <div className="wrap">
-        <section className="hero">
-          <div className="hero-left">
-            <div className="eyebrow"><span className="sq"></span><span>ONE-OF-ONE ASSET VAULT</span></div>
-            <h1>Full resolution.<br />Zero compression.</h1>
-            <p>Verified creators host original PNGs, overlays and 4K wallpapers here, untouched by platform compression or watermarks. Find any linked handle, pull the master file.</p>
-            <div className="hero-ctas">
-              <a href="/submit" className="btn-solid">Submit work</a>
-              <a href="#sheet" className="btn-outline">Explore vault</a>
-            </div>
-          </div>
-          <div className="readout">
-            <div className="readout-title">vault status</div>
-            <div className="readout-row"><span className="k">files indexed</span><span className="v">{totalFiles.toLocaleString()}</span></div>
-            <div className="readout-row"><span className="k">min. resolution</span><span className="v">4096×2304</span></div>
-            <div className="readout-row"><span className="k">formats</span><span className="v">PNG · PSD · MOV</span></div>
-            <div className="readout-row"><span className="k">watermarks</span><span className="v">0<span className="cursor-blink"></span></span></div>
-          </div>
-        </section>
-
-        <div className="creators-strip">
-          <span className="cs-label">trending —</span>
-          {creators.length > 0 ? (
-            creators.map((c) => (
-              <div className="creator-chip" key={c.username}>
-                <div className="avatar" style={{ backgroundImage: `url(${c.avatar_url || '/default-avatar.png'})` }}></div>
-                <span className="handle">@{c.username}</span>
-                <span className="sq-verified"></span>
-              </div>
-            ))
-          ) : (
-            <span className="mono" style={{ fontSize: '12px', color: 'var(--muted)' }}>[ waiting for verified creators... ]</span>
-          )}
-        </div>
-
-        <div className="ruler">
-          <span>showing 001–{String(assets.length).padStart(3, '0')} of {totalFiles}</span>
-          <div className="ruler-ticks">
-            {Array.from({ length: 16 }).map((_, idx) => (
-              <div className="tick" key={idx}></div>
+        {/* 2 & 3. Search Bar and Category Buttons */}
+        <div style={{ marginBottom: '40px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <input 
+            type="text" 
+            placeholder="[ SEARCH_ASSETS... ]"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '12px', border: '1px solid #dcdcd7', fontFamily: 'monospace', outline: 'none' }}
+          />
+          
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {CATEGORIES.map(cat => (
+              <button key={cat} onClick={() => setActiveCategory(cat)} 
+                style={{ 
+                  padding: '8px 12px', 
+                  border: activeCategory === cat ? '1px solid #0a0a0a' : '1px solid #dcdcd7', 
+                  background: activeCategory === cat ? '#0a0a0a' : '#fff', 
+                  color: activeCategory === cat ? '#fff' : '#0a0a0a', 
+                  fontSize: '11px', 
+                  cursor: 'pointer',
+                  borderRadius: 0
+                }}>
+                {cat}
+              </button>
             ))}
           </div>
-          <span>sorted by newest</span>
         </div>
 
-        <div className="contact-sheet" id="sheet">
-          {loading ? (
-            <div style={{ padding: '60px', gridColumn: 'span 6', textAlign: 'center' }} className="mono">
-              [ querying live database... ]
-            </div>
-          ) : assets.length > 0 ? (
-            assets.map((item, i) => {
-              const code = 'F' + String(i + 1).padStart(3, '0');
-              const tierBadge = item.access_type === 'MONEY'
-                ? `£${item.price_gbp}`
-                : item.access_type === 'FULLY_FREE'
-                ? 'FULLY FREE'
-                : 'FREE';
-
-              return (
-                <div className="frame" key={item.id} onClick={() => setSelectedAsset(item)} style={{ cursor: 'pointer' }}>
-                  <div className="frame-img-wrap">
-                    <img src={item.preview_url} alt={item.title || 'Vault Asset'} />
-                    <span className="frame-code">[{code}]</span>
-                    <span className="frame-tier">{tierBadge}</span>
-                  </div>
-                  <div className="frame-caption">
-                    <div className="handle-row">
-                      <span className="handle">@{item.profiles?.username || 'creator'}</span>
-                      {item.profiles?.is_verified && <span className="sq-verified"></span>}
-                    </div>
-                    <span className="res">{item.resolution || '4096×2304'}</span>
-                  </div>
+        {/* 4. Vault Grid & Empty State */}
+        {loading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>[ LOADING_VAULT... ]</div>
+        ) : filteredAssets.length === 0 ? (
+          <div style={{ padding: '80px', textAlign: 'center', border: '1px solid #dcdcd7', color: '#71716b' }}>[ NO_RECORDS_FOUND_IN_VAULT ]</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+            {filteredAssets.map(asset => (
+              <div key={asset.id} style={{ border: '1px solid #dcdcd7', background: '#fff', boxShadow: '4px 4px 0px #0a0a0a', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <img src={asset.preview_url} alt={asset.title} style={{ width: '100%', height: '200px', objectFit: 'cover', border: '1px solid #dcdcd7' }} />
+                <h3 style={{ fontSize: '14px', margin: 0 }}>{asset.title}</h3>
+                <div style={{ fontSize: '10px', color: '#71716b' }}>
+                  {asset.file_type} | {asset.resolution} | {asset.access_type === 'MONEY' ? `£${asset.price_gbp}` : asset.access_type}
                 </div>
-              );
-            })
-          ) : (
-            <div 
-              style={{ 
-                gridColumn: 'span 6', 
-                padding: '80px 20px', 
-                textAlign: 'center', 
-                background: '#fff',
-                border: '1px solid var(--border)'
-              }} 
-              className="mono"
-            >
-              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>
-                [ INDEX EMPTY — NO PUBLISHED ASSETS YET ]
+                <Link href={`/asset/${asset.id}`} style={{ marginTop: 'auto', display: 'block', textAlign: 'center', padding: '10px', border: '1px solid #0a0a0a', color: '#0a0a0a', textDecoration: 'none', fontSize: '11px', fontWeight: 'bold' }}>
+                  [ INSPECT_ASSET ]
+                </Link>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '20px' }}>
-                Be the first verified creator to host uncompressed 4K assets on F4C.
-              </div>
-              <a href="/become-creator" className="btn-bracket" style={{ display: 'inline-block' }}>
-                [ become a creator — £5 ]
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <AssetModal asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
-
-      <footer>
-        <div className="wrap" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-          <span>[ uncompressed · unwatermarked · verified creators only ]</span>
-          <span>F4C © 2026</span>
-        </div>
-      </footer>
-    </>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

@@ -11,21 +11,54 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-body {
-  font-family: 'Space Grotesk', sans-serif;
-  color: var(--ink);
+html, body {
+  min-height: 100vh;
+  margin: 0;
   background:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
     var(--paper);
   background-size: 28px 28px;
-  -webkit-font-smoothing: antialiased;
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--ink);
+}
+
+.login-page-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 32px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth-card h1 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.auth-card p {
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .mono { font-family: 'IBM Plex Mono', monospace; }
 .wrap { max-width: 1440px; margin: 0 auto; padding: 0 32px; }
 
-/* ===== HEADER ===== */
+/* ... existing styles ... */
+
 header {
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; background: rgba(255, 255, 255, 0.94);
