@@ -85,7 +85,7 @@ export default function ProfileSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white p-8 font-mono text-xs">
+      <div className="min-h-screen p-8 font-mono text-xs">
         [ INITIALIZING_VAULT_SETTINGS... ]
       </div>
     )
@@ -96,19 +96,20 @@ export default function ProfileSettingsPage() {
       {/* Header */}
       <div className="border-b border-[#0a0a0a] pb-4 mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">
-            [ VAULT_CREATOR_SETTINGS ]
-          </h1>
+          <h1 className="text-[24px] font-semibold tracking-tight">Account settings</h1>
           <p className="text-xs text-gray-500 mt-1">
             Configure your universal creator ledger handles and portfolio identity.
           </p>
         </div>
-        {profile.is_verified && (
-          <span className="px-2 py-1 bg-[#0a0a0a] text-white text-[10px] font-bold tracking-wider uppercase flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
-            .sq-verified
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-2">
+            <span className="text-[10px] font-mono border border-black px-1">[ VAULT_CREATOR_SETTINGS ]</span>
+            {profile.is_verified && (
+            <span className="px-2 py-1 bg-[#0a0a0a] text-white text-[10px] font-bold tracking-wider uppercase flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
+                .sq-verified
+            </span>
+            )}
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">

@@ -31,7 +31,7 @@ export default function SubmitPage() {
   return (
     <div className="vault-page">
       <div className="submit-card">
-        <div className="card-tag">[ phase 2 · submit ]</div>
+        <div className="card-tag">Phase 2 · Submit</div>
 
         <div className="card-header">
           <span className="mark" />

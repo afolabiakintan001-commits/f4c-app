@@ -10,7 +10,7 @@ export default function ContactSheetPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen">
       <ReadoutPanel />
       <CreatorsTicker />
       

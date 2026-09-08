@@ -58,13 +58,22 @@ function ProfileDashboard() {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        {errorParam ? (
-            <div className="mono border border-red-600 p-8 text-[14px] text-red-600">[ ERROR: {errorParam.replace(/_/g, ' ')} ]</div>
-        ) : (
-            <div className="mono border border-[#0a0a0a] p-8 text-[14px]">[ ACCESS_DENIED: AUTHENTICATION_REQUIRED ]</div>
-        )}
-        <button onClick={() => setIsAuthOpen(true)} className="mono bg-black text-white px-6 py-2 text-[12px]">[ INITIALIZE_LOGIN ]</button>
+      <div className="page-wrapper min-h-screen flex items-center justify-center p-6">
+        <div className="card w-full max-w-[420px] p-8 border border-[#dcdcd7] bg-white" style={{borderRadius: '2px'}}>
+          <h1 className="font-['Space_Grotesk'] text-[20px] font-bold text-[#0a0a0a] mb-2">
+            {errorParam ? 'Sign in failed' : 'Sign in to view this page'}
+          </h1>
+          <p className="font-['Space_Grotesk'] text-[14px] text-[#71716b] mb-8">
+            {errorParam ? errorParam.replace(/_/g, ' ') : 'Authentication is required to access your dashboard and vault.'}
+          </p>
+          <button 
+            onClick={() => setIsAuthOpen(true)} 
+            className="w-full px-[18px] py-[11px] bg-[#0a0a0a] text-white font-['IBM_Plex_Mono'] text-[13.5px] font-medium tracking-wide"
+            style={{ borderRadius: '2px' }}
+          >
+            [ log in ]
+          </button>
+        </div>
         <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={() => window.location.reload()} />
       </div>
     );
@@ -75,7 +84,8 @@ function ProfileDashboard() {
       {/* Header Block */}
       <div className="flex items-center gap-3 mb-8">
         <div className="sq w-[7px] h-[7px] bg-black" />
-        <h1 className="text-[14px] tracking-tight">[ CREATOR_DASHBOARD ]</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight">Your profile</h1>
+        <span className="text-[10px] font-mono border border-black px-1 ml-auto">[ CREATOR_DASHBOARD ]</span>
       </div>
       
       {/* Profile Identity Row */}

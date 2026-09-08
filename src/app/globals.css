@@ -11,54 +11,21 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body {
-  min-height: 100vh;
-  margin: 0;
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--ink);
   background:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
     var(--paper);
   background-size: 28px 28px;
-  font-family: 'Space Grotesk', sans-serif;
-  color: var(--ink);
-}
-
-.login-page-wrapper {
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 460px;
-  padding: 32px;
-  background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.auth-card h1 {
-  font-size: 22px;
-  line-height: 1.2;
-}
-
-.auth-card p {
-  font-size: 14px;
-  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 .mono { font-family: 'IBM Plex Mono', monospace; }
 .wrap { max-width: 1440px; margin: 0 auto; padding: 0 32px; }
 
-/* ... existing styles ... */
-
+/* ===== HEADER ===== */
 header {
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; background: rgba(255, 255, 255, 0.94);
@@ -239,4 +206,36 @@ footer {
   border-top: 1px solid var(--border); padding: 22px 0;
   display: flex; justify-content: space-between; align-items: center;
   font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted);
+}
+
+/* ===== LOGIN PAGE ===== */
+.login-page-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 32px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth-card h1 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.auth-card p {
+  font-size: 14px;
+  line-height: 1.6;
 }

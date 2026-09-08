@@ -1,12 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const errorParam = searchParams.get('error')
 
   const supabase = createClient()
 
@@ -15,10 +18,16 @@ export default function LoginPage() {
     setMessage(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
     })
     if (error) {
-      setMessage(`[ ERROR ]: ${error.message}`)
+      setMessage(`[ AUTH_ERROR: ${error.message} ]`)
       setLoading(false)
     }
   }
@@ -33,7 +42,7 @@ export default function LoginPage() {
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
     setLoading(false)
-    if (error) setMessage(`[ ERROR ]: ${error.message}`)
+    if (error) setMessage(`[ AUTH_ERROR: ${error.message} ]`)
     else setMessage('[ SUCCESS ]: Magic link dispatched. Check your inbox.')
   }
 
@@ -41,6 +50,13 @@ export default function LoginPage() {
     <div className="login-page-wrapper">
       <div className="auth-card">
         
+        {/* Error Banner */}
+        {errorParam && (
+          <div className="mb-6 p-4 border border-[#dcdcd7] bg-[#fef2f2] font-mono text-[12px] text-[#b91c1c]">
+            [ AUTH_ERROR: {decodeURIComponent(errorParam)} ]
+          </div>
+        )}
+
         {/* Header Row: F4C Logo Mark */}
         <div className="flex items-center gap-2 font-mono font-bold text-[16px]">
           <span className="w-[7px] h-[7px] bg-[#0a0a0a] inline-block"></span>
@@ -112,5 +128,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   )
 }

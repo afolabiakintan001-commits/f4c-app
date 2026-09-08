@@ -1,17 +1,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') ?? '/profile'
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? '/dashboard'
+  const errorParam = searchParams.get('error_description') || searchParams.get('error')
+
+  if (errorParam) {
+    console.error('OAuth Callback Error Param:', errorParam)
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorParam)}`)
+  }
 
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
@@ -23,22 +29,22 @@ export async function GET(request: NextRequest) {
                 cookieStore.set(name, value, options)
               )
             } catch {
-              // Ignore if called from a Server Component middleware
+              // Ignore if called from Server Component context
             }
           },
         },
       }
     )
 
-    // Exchange the temporary OAuth code for a permanent session
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-
+    
     if (error) {
-      console.error('Auth callback error:', error.message)
-      return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin))
+      console.error('PKCE Exchange Error:', error.message)
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`)
     }
+
+    return NextResponse.redirect(`${origin}${next}`)
   }
 
-  // Redirect user straight to profile page or requested next destination
-  return NextResponse.redirect(new URL(next, requestUrl.origin))
+  return NextResponse.redirect(`${origin}/login?error=no_code_provided`)
 }

@@ -25,15 +25,10 @@ interface AssetModalProps {
 export default function AssetModal({ asset, onClose }: AssetModalProps) {
   const [userPoints, setUserPoints] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [unlocked, setUnlocked] = useState(false);
+  const [unlocked, setUnlocked] = useState(asset?.access_type === 'FULLY_FREE' || false);
 
   useEffect(() => {
     if (!asset) return;
-
-    // Check if asset is fully free
-    if (asset.access_type === 'FULLY_FREE') {
-      setUnlocked(true);
-    }
 
     // Fetch logged in user points
     async function fetchUserPoints() {

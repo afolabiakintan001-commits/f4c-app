@@ -80,7 +80,7 @@ export default function BecomeCreatorPage() {
         </div>
 
         {profile?.is_creator ? (
-          <div style={{ background: '#f1f1ef', padding: '14px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>
+          <div style={{ background: 'var(--hover-fill)', padding: '14px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>
             [ YOUR ACCOUNT IS ALREADY VERIFIED ]
           </div>
         ) : (
