@@ -59,6 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle()
 
       if (error) {
+        if (error.message && error.message.includes('JWT issued at future')) {
+          console.warn('Session expired due to clock skew, signing out...');
+          await signOut();
+        }
         console.error('Error fetching profile:', error.message || error)
         setProfile(null)
         return
