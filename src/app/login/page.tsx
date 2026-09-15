@@ -1,140 +1,287 @@
-'use client'
+'use client';
 
-import React, { useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import '../globals.css';
 
-function LoginForm() {
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const searchParams = useSearchParams()
-  const errorParam = searchParams.get('error')
-
-  const supabase = createClient()
-
-  const handleGoogleLogin = async () => {
-    setLoading(true)
-    setMessage(null)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
-    })
-    if (error) {
-      setMessage(`[ AUTH_ERROR: ${error.message} ]`)
-      setLoading(false)
-    }
-  }
-
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) return
-    setLoading(true)
-    setMessage(null)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    })
-    setLoading(false)
-    if (error) setMessage(`[ AUTH_ERROR: ${error.message} ]`)
-    else setMessage('[ SUCCESS ]: Magic link dispatched. Check your inbox.')
-  }
-
-  return (
-    <div className="login-page-wrapper">
-      <div className="auth-card">
-        
-        {/* Error Banner */}
-        {errorParam && (
-          <div className="mb-6 p-4 border border-[#dcdcd7] bg-[#fef2f2] font-mono text-[12px] text-[#b91c1c]">
-            [ AUTH_ERROR: {decodeURIComponent(errorParam)} ]
-          </div>
-        )}
-
-        {/* Header Row: F4C Logo Mark */}
-        <div className="flex items-center gap-2 font-mono font-bold text-[16px]">
-          <span className="w-[7px] h-[7px] bg-[#0a0a0a] inline-block"></span>
-          <span>F4C</span>
-        </div>
-
-        {/* Title */}
-        <h1 className="font-mono font-bold uppercase tracking-tight"
-            style={{ fontSize: '22px', whiteSpace: 'nowrap' }}>
-          [ creator_authentication ]
-        </h1>
-
-        {/* Subhead */}
-        <p className="font-['Space_Grotesk'] text-[14px] text-[#71716b] leading-normal">
-          Claim your handle and publish uncompressed master files across Instagram, TikTok, YouTube, X.
-        </p>
-
-        <div className="flex flex-col gap-[18px]">
-          {/* Google OAuth Button */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full py-4 border border-[#dcdcd7] bg-white font-mono text-[13px] uppercase font-bold tracking-wider transition-colors flex items-center justify-center gap-3 cursor-pointer hover:bg-[#f1f1ef]"
-            style={{ borderRadius: '2px' }}
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24"><path d="M12.24 10.285V13.4h6.887C18.2 15.68 15.8 18 12.24 18c-3.535 0-6.4-2.865-6.4-6.4s2.865-6.4 6.4-6.4c1.58 0 3.02.58 4.14 1.54l2.42-2.42C17.34 2.8 14.94 2 12.24 2 6.58 2 2 6.58 2 12.24s4.58 10.24 10.24 10.24c5.92 0 9.84-4.16 9.84-10.02 0-.68-.08-1.36-.2-2.175H12.24z" fill="#0A0A0A"/></svg>
-            [ continue_with_google ]
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4 font-mono text-[11px] text-[#71716b] uppercase tracking-widest">
-            <div className="flex-grow border-t border-[#dcdcd7]"></div>
-            or magic link
-            <div className="flex-grow border-t border-[#dcdcd7]"></div>
-          </div>
-
-          {/* Magic Link Form */}
-          <form onSubmit={handleMagicLink} className="space-y-[18px]">
-            <div>
-              <label className="block mb-2 font-mono text-[11px] uppercase font-bold tracking-widest text-[#0a0a0a]">
-                [ email_address ]
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="creator@domain.com"
-                required
-                className="w-full pb-3 border-b border-[#dcdcd7] font-mono text-[14px] focus:outline-none focus:border-[#0a0a0a] bg-transparent"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-[#0a0a0a] text-white font-mono text-[13px] uppercase font-bold tracking-wider disabled:opacity-50 cursor-pointer"
-              style={{ borderRadius: '2px' }}
-            >
-              {loading ? '[ dispatching... ]' : '[ send_magic_link ]'}
-            </button>
-          </form>
-
-          {/* Feedback Message */}
-          {message && (
-            <div className="font-mono text-[12px] text-[#0a0a0a] border-t border-[#dcdcd7] pt-6">
-              {message}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
+interface LoginFormState {
+  email: string;
+  password: string;
+  creatorHandle: string;
+  intent: 'login' | 'creator' | null;
 }
 
 export default function LoginPage() {
+  const [formState, setFormState] = useState<LoginFormState>({
+    email: '',
+    password: '',
+    creatorHandle: '',
+    intent: null,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      const checkMobile = () => setIsMobile(window.innerWidth < 768);
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
+    }
+  }, []);
+
+  const handleInputChange = (field: keyof LoginFormState, value: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setError(null);
+  };
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    setError(null);
+    // TODO: Integrate with Supabase Google OAuth
+    try {
+      console.log('Google auth triggered');
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (err) {
+      setError('Google authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLink = async () => {
+    if (!formState.email) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    // TODO: Send magic link via Supabase
+    try {
+      console.log('Magic link sent to:', formState.email);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (err) {
+      setError('Failed to send magic link. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClaimCreatorHandle = async () => {
+    if (!formState.creatorHandle) {
+      setError('Please enter a creator handle');
+      return;
+    }
+    if (formState.creatorHandle.length < 3) {
+      setError('Handle must be at least 3 characters');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    // TODO: Validate handle availability and trigger Google/Magic link
+    try {
+      console.log('Claiming creator handle:', formState.creatorHandle);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (err) {
+      setError('Handle is already taken. Please try another.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!mounted) return null;
+
+  // Mobile flow: single streamlined Google action
+  if (isMobile) {
+    return (
+      <div className="page-wrapper">
+        <div className="card" style={{ maxWidth: '440px', width: '100%' }}>
+          <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+            <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>F4C Vault</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)' }} className="mono">
+              uncompressed · unwatermarked
+            </div>
+          </div>
+
+          <h1 style={{ fontSize: '22px', textAlign: 'center', marginBottom: '16px' }}>
+            Access your vault
+          </h1>
+
+          <p style={{ fontSize: '14px', color: 'var(--muted)', textAlign: 'center', marginBottom: '24px', lineHeight: 1.6 }}>
+            Sign in with your Google account to explore verified creators' uncompressed assets.
+          </p>
+
+          {error && (
+            <div
+              style={{
+                padding: '12px',
+                background: 'rgba(160, 0, 0, 0.1)',
+                border: '1px solid rgba(160, 0, 0, 0.3)',
+                borderRadius: 'var(--radius)',
+                fontSize: '12px',
+                color: '#a00',
+                marginBottom: '16px',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <button
+            className="btn-bracket"
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            {loading ? '[ connecting... ]' : '[ continue_with_google ]'}
+          </button>
+
+          <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--muted)', marginTop: '12px' }}>
+            <span>Don't have an account? </span>
+            <Link href="/become-creator" style={{ color: 'var(--ink)', textDecoration: 'underline', fontWeight: 600 }}>
+              Become a creator
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop flow: dual-intent layout
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LoginForm />
-    </Suspense>
-  )
+    <div className="page-wrapper">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', width: '100%', maxWidth: '960px' }}>
+        {/* LEFT: Universal Login */}
+        <div className="card">
+          <div style={{ marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '18px', marginBottom: '4px' }}>Enter the vault</h2>
+            <div style={{ fontSize: '12px', color: 'var(--muted)' }} className="mono">
+              browse & purchase assets
+            </div>
+          </div>
+
+          {error && (
+            <div
+              style={{
+                padding: '12px',
+                background: 'rgba(160, 0, 0, 0.1)',
+                border: '1px solid rgba(160, 0, 0, 0.3)',
+                borderRadius: 'var(--radius)',
+                fontSize: '12px',
+                color: '#a00',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="input-label">email address</label>
+            <input
+              type="email"
+              className="input-field"
+              placeholder="you@example.com"
+              value={formState.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="input-label">password</label>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="••••••••"
+              value={formState.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <button
+            className="btn-solid"
+            onClick={handleMagicLink}
+            disabled={loading}
+            style={{ marginTop: '8px', width: '100%' }}
+          >
+            {loading ? 'Sending...' : '[ enter_vault ]'}
+          </button>
+
+          <p style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', marginTop: '12px' }}>
+            Or{' '}
+            <button
+              onClick={handleGoogleAuth}
+              disabled={loading}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--ink)',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontFamily: 'Space Grotesk',
+                fontSize: 'inherit',
+              }}
+            >
+              continue with Google
+            </button>
+          </p>
+        </div>
+
+        {/* RIGHT: Creator Handle Claim */}
+        <div className="card">
+          <div style={{ marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '18px', marginBottom: '4px' }}>Claim creator handle</h2>
+            <div style={{ fontSize: '12px', color: 'var(--muted)' }} className="mono">
+              publish uncompressed assets
+            </div>
+          </div>
+
+          <p style={{ fontSize: '14px', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '12px' }}>
+            Verified creators host 4K master files with zero compression. Check handle availability and claim yours.
+          </p>
+
+          <div>
+            <label className="input-label">creator handle</label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="yourhandle"
+              value={formState.creatorHandle}
+              onChange={(e) => handleInputChange('creatorHandle', e.target.value.replace(/^@/, '').toLowerCase())}
+              disabled={loading}
+            />
+            <div style={{ fontSize: '11px', color: 'var(--placeholder)', marginTop: '4px' }}>
+              lowercase, no spaces. linked from all platforms.
+            </div>
+          </div>
+
+          <button
+            className="btn-solid"
+            onClick={handleClaimCreatorHandle}
+            disabled={loading}
+            style={{ marginTop: '16px', width: '100%' }}
+          >
+            {loading ? 'Checking...' : '[ claim_handle ]'}
+          </button>
+
+          <p style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', marginTop: '12px' }}>
+            Setup fee: <span style={{ fontWeight: 600, color: 'var(--ink)' }}>£5</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
