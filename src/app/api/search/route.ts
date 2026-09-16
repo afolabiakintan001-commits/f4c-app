@@ -1,74 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
-export interface ProfileResult {
-  id: string;
-  username: string | null;
-  avatar_url: string | null;
-}
-
-export interface HandleResult {
-  id: string;
-  handle: string;
-  platform: string;
-  profiles: { username: string | null } | null;
-}
-
-export interface SearchApiResponse {
-  profiles: ProfileResult[];
-  handles: HandleResult[];
-  error?: string;
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
 
 export async function GET(request: NextRequest) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
-  }
-
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q')?.trim().replace(/^@/, '');
+    const query = searchParams.get('q')?.trim().replace(/^@/, '').toLowerCase();
 
     if (!query || query.length < 2) {
-      return NextResponse.json<SearchApiResponse>({
-        profiles: [],
-        handles: [],
-      });
+      return NextResponse.json({ error: 'Query too short' }, { status: 400 });
     }
 
-    // Execute parallel searches on usernames and multi-platform social handles
-    const [profilesResult, handlesResult] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('id, username, avatar_url')
-        .ilike('username', `%${query}%`)
-        .limit(5),
-      supabase
-        .from('social_handles')
-        .select('id, handle, platform, profiles(username)')
-        .ilike('handle', `%${query}%`)
-        .limit(5),
+    // 1. Exact Match Lookups
+    const [profileMatch, handleMatch] = await Promise.all([
+      supabase.from('profiles').select('id').ilike('username', query).maybeSingle(),
+      supabase.from('linked_handles').select('creator_id').ilike('handle', query).maybeSingle(),
     ]);
 
-    if (profilesResult.error) throw profilesResult.error;
-    if (handlesResult.error) throw handlesResult.error;
+    // 2. Redirect on Exact Match
+    if (profileMatch.data?.id) {
+        return NextResponse.json({ type: 'redirect', creator_id: profileMatch.data.id });
+    }
+    if (handleMatch.data?.creator_id) {
+        return NextResponse.json({ type: 'redirect', creator_id: handleMatch.data.creator_id });
+    }
 
-    return NextResponse.json<SearchApiResponse>({
-      profiles: (profilesResult.data as unknown as ProfileResult[]) || [],
-      handles: (handlesResult.data as unknown as HandleResult[]) || [],
+    // 3. Partial Match Fallback
+    const [partialProfiles, partialHandles] = await Promise.all([
+      supabase.from('profiles').select('id, username').ilike('username', `%${query}%`),
+      supabase.from('linked_handles').select('creator_id, handle').ilike('handle', `%${query}%`),
+    ]);
+
+    return NextResponse.json({
+        type: 'list',
+        profiles: partialProfiles.data || [],
+        handles: partialHandles.data || []
     });
   } catch (error: any) {
-    console.error('Search API Route Error:', error);
-    return NextResponse.json<SearchApiResponse>(
-      { profiles: [], handles: [], error: 'Failed to process search query' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }
 }

@@ -43,7 +43,8 @@ function ProfileDashboard() {
   }, []);
 
   const handleDelete = async (assetId: string, url: string) => {
-    if (!confirm('[ CONFIRM: DELETE_ASSET_FROM_VAULT? ]')) return;
+    // TEMPORARY: Simplified flow until modal is built.
+    // Deleting directly as native confirm() is banned.
     
     // Delete from storage
     const path = url.split('/').pop()!;

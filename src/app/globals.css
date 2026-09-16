@@ -206,17 +206,41 @@ button:not(.mono) {
   flex-shrink: 0;
 }
 
-/* ===== ANIMATIONS ===== */
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+/* ===== ERRORS & VALIDATION ===== */
+.validation-banner {
+  border: 1px solid var(--ink);
+  background: var(--hover-fill);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
+.vb-header { display: flex; align-items: center; gap: 8px; }
+.vb-header .sq { width: 7px; height: 7px; background: var(--ink); flex: 0 0 auto; }
+.vb-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600; font-size: 14px; color: var(--ink);
+}
+.vb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.vb-list li {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13.5px; color: var(--muted);
+}
+.vb-list .sq-sm { width: 4px; height: 4px; background: var(--muted); flex: 0 0 auto; }
+
+.field-error {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12.5px; color: var(--ink);
+  margin-top: 6px;
+}
+.field-error .sq-sm { width: 4px; height: 4px; background: var(--ink); flex: 0 0 auto; }
+
+/* Invalid field state — border weight, never color */
+.field-input.invalid { border: 1.5px solid var(--ink); }
+
 
 @keyframes slideIn {
   from {

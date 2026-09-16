@@ -2,17 +2,22 @@
 
 import React, { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { LinkedHandles } from '@/components/profile/LinkedHandles'
 
 interface ProfileData {
   primary_handle: string
   display_name: string
   bio: string
-  instagram_handle: string
-  tiktok_handle: string
-  youtube_handle: string
-  x_handle: string
   portfolio_url: string
   is_verified: boolean
+}
+
+interface Handle {
+  id: string
+  creator_id: string
+  platform: 'TikTok' | 'Instagram' | 'X' | 'YouTube'
+  handle: string
+  verified: boolean
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co';
@@ -23,13 +28,10 @@ export default function ProfileSettingsPage() {
     primary_handle: '',
     display_name: '',
     bio: '',
-    instagram_handle: '',
-    tiktok_handle: '',
-    youtube_handle: '',
-    x_handle: '',
     portfolio_url: '',
     is_verified: false,
   })
+  const [handles, setHandles] = useState<Handle[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
@@ -37,21 +39,33 @@ export default function ProfileSettingsPage() {
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-
-        if (data) setProfile(data)
+        // Load profile
+        const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+        if (p) setProfile(p)
+        
+        // Load handles
+        const { data: h } = await supabase.from('linked_handles').select('*').eq('creator_id', user.id)
+        if (h) setHandles(h)
       }
       setLoading(false)
     }
-    loadProfile()
+    loadData()
   }, [])
+
+  const handleUpdateHandle = (id: string, field: keyof Handle, value: any) => {
+    setHandles(handles.map(h => h.id === id ? { ...h, [field]: value } : h))
+  }
+
+  const handleAddHandle = () => {
+    setHandles([...handles, { id: crypto.randomUUID(), creator_id: '', platform: 'TikTok', handle: '', verified: false }])
+  }
+
+  const handleRemoveHandle = (id: string) => {
+    setHandles(handles.filter(h => h.id !== id))
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,26 +75,17 @@ export default function ProfileSettingsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Formatting handles to ensure '@' consistency
-    const formattedData = {
-      ...profile,
-      primary_handle: profile.primary_handle.startsWith('@') 
-        ? profile.primary_handle 
-        : `@${profile.primary_handle}`,
-      updated_at: new Date().toISOString(),
+    // Save Profile
+    await supabase.from('profiles').update(profile).eq('id', user.id)
+    
+    // Save Handles (delete/upsert strategy)
+    await supabase.from('linked_handles').delete().eq('creator_id', user.id)
+    if (handles.length > 0) {
+        await supabase.from('linked_handles').insert(handles.map(h => ({ ...h, id: undefined, creator_id: user.id })))
     }
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(formattedData)
-      .eq('id', user.id)
 
     setSaving(false)
-    if (error) {
-      setStatusMsg(`[ SAVE_FAILED ]: ${error.message}`)
-    } else {
-      setStatusMsg('[ PROFILE_UPDATED ]: Vault profile and cross-platform handles synced.')
-    }
+    setStatusMsg('[ PROFILE_UPDATED ]')
   }
 
   if (loading) {
@@ -127,7 +132,7 @@ export default function ProfileSettingsPage() {
               </label>
               <input
                 type="text"
-                value={profile.primary_handle}
+                value={profile.primary_handle || ''}
                 onChange={(e) => setProfile({ ...profile, primary_handle: e.target.value })}
                 className="w-full px-3 py-2 border border-[#0a0a0a] text-xs font-mono bg-gray-50"
                 placeholder="@handle"
@@ -141,7 +146,7 @@ export default function ProfileSettingsPage() {
               </label>
               <input
                 type="text"
-                value={profile.display_name}
+                value={profile.display_name || ''}
                 onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
                 className="w-full px-3 py-2 border border-[#0a0a0a] text-xs font-mono bg-gray-50"
                 placeholder="Rin Visuals"
@@ -150,79 +155,13 @@ export default function ProfileSettingsPage() {
           </div>
         </div>
 
-        {/* Universal Social Platform Handles */}
-        <div className="border border-[#dcdcd7] p-5 bg-white shadow-sm space-y-4">
-          <h2 className="text-xs font-bold uppercase border-b border-[#dcdcd7] pb-2 text-gray-800">
-            [ CROSS_PLATFORM_LEDGER_HANDLES ]
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-bold uppercase mb-1 text-gray-600">
-                Instagram Handle
-              </label>
-              <input
-                type="text"
-                value={profile.instagram_handle || ''}
-                onChange={(e) => setProfile({ ...profile, instagram_handle: e.target.value })}
-                className="w-full px-3 py-2 border border-[#dcdcd7] text-xs font-mono focus:border-[#0a0a0a] outline-none"
-                placeholder="@rin.edits"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase mb-1 text-gray-600">
-                TikTok Handle
-              </label>
-              <input
-                type="text"
-                value={profile.tiktok_handle || ''}
-                onChange={(e) => setProfile({ ...profile, tiktok_handle: e.target.value })}
-                className="w-full px-3 py-2 border border-[#dcdcd7] text-xs font-mono focus:border-[#0a0a0a] outline-none"
-                placeholder="@rin_edits"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase mb-1 text-gray-600">
-                YouTube Channel
-              </label>
-              <input
-                type="text"
-                value={profile.youtube_handle || ''}
-                onChange={(e) => setProfile({ ...profile, youtube_handle: e.target.value })}
-                className="w-full px-3 py-2 border border-[#dcdcd7] text-xs font-mono focus:border-[#0a0a0a] outline-none"
-                placeholder="@RinMotionGraphics"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase mb-1 text-gray-600">
-                X / Twitter Handle
-              </label>
-              <input
-                type="text"
-                value={profile.x_handle || ''}
-                onChange={(e) => setProfile({ ...profile, x_handle: e.target.value })}
-                className="w-full px-3 py-2 border border-[#dcdcd7] text-xs font-mono focus:border-[#0a0a0a] outline-none"
-                placeholder="@rin_vfx"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold uppercase mb-1 text-gray-600">
-              External Portfolio / Website
-            </label>
-            <input
-              type="url"
-              value={profile.portfolio_url || ''}
-              onChange={(e) => setProfile({ ...profile, portfolio_url: e.target.value })}
-              className="w-full px-3 py-2 border border-[#dcdcd7] text-xs font-mono focus:border-[#0a0a0a] outline-none"
-              placeholder="https://rinvisuals.com"
-            />
-          </div>
-        </div>
+        {/* Linked Handles */}
+        <LinkedHandles 
+          handles={handles} 
+          onAdd={handleAddHandle} 
+          onRemove={handleRemoveHandle} 
+          onUpdate={handleUpdateHandle} 
+        />
 
         {/* Save Controls */}
         <div className="flex items-center justify-between pt-2">

@@ -156,6 +156,22 @@ padding, never touching the viewport edge.
 - Any new color, shadow, or font beyond what's listed above.
 - Missing the site-wide graph-paper background on any full page.
 
+## 9. Errors & validation
+
+1. Never use red, pink, or any color outside the existing token list for
+   error states. Urgency is communicated through the border weight and
+   the square marker, not color.
+2. Never write error text in ALL_CAPS or bracket-monospace — it's a
+   message a human needs to read and act on, so it's plain Space Grotesk
+   sentence case, same as any other heading/body text on the site.
+3. When multiple things are wrong (e.g. missing file AND missing title),
+   list them separately in a `ValidationBanner` instead of concatenating
+   them into one line.
+4. For a single field-specific problem, use `FieldError` directly under
+   that field instead of a banner.
+5. An invalid input gets a 1.5px `--ink` border, not a red outline or red
+   background tint.
+
 ## 8. Before shipping any new page, check
 
 - [ ] Background grid applied to `html, body`, not just the card

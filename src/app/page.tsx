@@ -25,7 +25,7 @@ interface Creator {
 }
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [creators, setCreators] = useState<Creator[]>([]);
@@ -51,7 +51,7 @@ export default function HomePage() {
         );
       }
 
-      if (activeTab !== 'All') {
+      if (activeTab !== 'ALL') {
         assetQuery = assetQuery.eq('category', activeTab);
       }
 
@@ -86,40 +86,43 @@ export default function HomePage() {
     loadData();
   }, [activeTab, searchTerm]);
 
+  const categories = ['ALL', 'RAW', '4K', 'PORTRAIT', 'LANDSCAPE', 'MONOCHROME', 'EDITORIAL'];
+
   return (
     <>
 
-      <header>
-        <div className="wrap header-row">
-          <div className="logo"><span className="mark"></span>F4C</div>
-          <div className="search-shell">
+      <div className="wrap">
+        {/* Search & Filter Bar */}
+        <section style={{ marginBottom: '32px' }}>
+          <div className="search-shell" style={{ marginBottom: '16px' }}>
             <span className="prompt mono">&gt;</span>
             <input
               type="text"
-              placeholder="search creator handle — any linked platform"
+              placeholder="search asset title or creator handle..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="nav-right">
-            <a href="/login" className="link-plain">Log in</a>
-            <a href="/become-creator" className="btn-bracket mono">[ become a creator — £5 ]</a>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveTab(cat)}
+                className="mono"
+                style={{
+                  padding: '4px 12px',
+                  border: `1px solid ${activeTab === cat ? 'var(--ink)' : 'var(--border)'}`,
+                  background: activeTab === cat ? 'var(--hover-fill)' : 'transparent',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                }}
+              >
+                [{cat}]
+              </button>
+            ))}
           </div>
-        </div>
-        <div className="wrap ledger">
-          {['All', 'Frames & Stills', 'Textures & Overlays', 'Presets & Project Files', '3D & Graphics'].map((cat) => (
-            <div
-              key={cat}
-              className={`ledger-item ${activeTab === cat ? 'active' : ''}`}
-              onClick={() => setActiveTab(cat)}
-            >
-              {cat}
-            </div>
-          ))}
-        </div>
-      </header>
+        </section>
 
-      <div className="wrap">
         <section className="hero">
           <div className="hero-left">
             <div className="eyebrow"><span className="sq"></span><span>ONE-OF-ONE ASSET VAULT</span></div>

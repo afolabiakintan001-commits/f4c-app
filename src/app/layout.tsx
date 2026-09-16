@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/context/AuthContext';
+import Header from '@/components/Header';
 import './globals.css';
 import './f4c-theme.css';
 
@@ -23,6 +24,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
+          <Header />
           {children}
         </AuthProvider>
       </body>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { FieldError } from './validation';
 
 interface Asset {
   id: string;
@@ -26,6 +27,7 @@ export default function AssetModal({ asset, onClose }: AssetModalProps) {
   const [userPoints, setUserPoints] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [unlocked, setUnlocked] = useState(asset?.access_type === 'FULLY_FREE' || false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!asset) return;
@@ -69,10 +71,11 @@ export default function AssetModal({ asset, onClose }: AssetModalProps) {
 
   const handleRedeem = async () => {
     setDownloading(true);
+    setError(null);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      alert('Please log in to redeem assets.');
+      setError('Please log in to redeem assets.');
       setDownloading(false);
       return;
     }
@@ -81,7 +84,7 @@ export default function AssetModal({ asset, onClose }: AssetModalProps) {
     const pointCost = 50;
 
     if ((userPoints || 0) < pointCost) {
-      alert('Insufficient points balance.');
+      setError('Insufficient points balance.');
       setDownloading(false);
       return;
     }
@@ -94,7 +97,7 @@ export default function AssetModal({ asset, onClose }: AssetModalProps) {
       .eq('id', user.id);
 
     if (error) {
-      alert('Failed to process redemption.');
+      setError('Failed to process redemption.');
     } else {
       setUserPoints(newBalance);
       setUnlocked(true);
@@ -162,6 +165,7 @@ export default function AssetModal({ asset, onClose }: AssetModalProps) {
 
           {/* Download / Unlock CTA */}
           <div>
+            {error && <FieldError message={error} />}
             {unlocked ? (
               <a
                 href={asset.master_file_url}

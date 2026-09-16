@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function BecomeCreatorPage() {
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    async function loadUser() {
+    async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUser(user);
         const { data } = await supabase
           .from('profiles')
           .select('*')
@@ -21,18 +22,22 @@ export default function BecomeCreatorPage() {
         setProfile(data);
       }
     }
-    loadUser();
+    loadProfile();
   }, []);
 
   const handleCheckout = async () => {
-    if (!user) {
-      alert('Please log in or create an account first.');
-      return;
-    }
-
     setLoading(true);
+    setError(null);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push('/login?next=/become-creator');
+        return;
+      }
+
+      // Proceed with checkout
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,12 +47,12 @@ export default function BecomeCreatorPage() {
         }),
       });
 
-      const { url, error } = await res.json();
-      if (error) throw new Error(error);
+      const { url, error: checkoutError } = await res.json();
+      if (checkoutError) throw new Error(checkoutError);
 
       window.location.href = url;
     } catch (err: any) {
-      alert(`Checkout failed: ${err.message}`);
+      setError(err.message);
       setLoading(false);
     }
   };
@@ -64,20 +69,20 @@ export default function BecomeCreatorPage() {
           F4C keeps image vaults uncompressed and free from platform watermarks. To prevent spam and index quality master files, creator accounts require a one-time £5 activation fee.
         </p>
 
-        <div style={{ borderTop: '1px solid #dcdcd7', borderBottom: '1px solid #dcdcd7', padding: '16px 0', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '8px' }}>
-            <span>UNLIMITED MASTER UPLOADS</span>
-            <span>✓ ENABED</span>
+        {error && (
+          <div style={{
+            border: '1px solid rgba(239, 68, 68, 0.5)',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            color: 'rgb(248, 113, 113)',
+            padding: '12px',
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            borderRadius: '2px',
+            marginBottom: '16px'
+          }}>
+            [ ERROR: {error} ]
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '8px' }}>
-            <span>VERIFIED CREATOR BADGE</span>
-            <span>✓ INCLUDED</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-            <span>ACTIVATION FEE</span>
-            <span style={{ fontWeight: 600 }}>£5.00 GBP (ONE-TIME)</span>
-          </div>
-        </div>
+        )}
 
         {profile?.is_creator ? (
           <div style={{ background: 'var(--hover-fill)', padding: '14px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>
@@ -93,7 +98,7 @@ export default function BecomeCreatorPage() {
               fontSize: '13px', fontWeight: 500
             }}
           >
-            {loading ? '[ REDIRECTING TO STRIPE... ]' : '[ BECOME A CREATOR — £5 ]'}
+            {loading ? '[ REDIRECTING... ]' : '[ BECOME A CREATOR — £5 ]'}
           </button>
         )}
       </div>

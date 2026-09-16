@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import AuthModal from '@/components/AuthModal';
 
 export default function AssetDetailPage() {
   const params = useParams();
@@ -11,6 +10,7 @@ export default function AssetDetailPage() {
 
   const [asset, setAsset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -25,8 +25,45 @@ export default function AssetDetailPage() {
     fetchData();
   }, [id]);
 
-  if (loading) return <main className="min-h-screen p-12">Loading...</main>;
-  if (!asset) return <main className="min-h-screen p-12">Asset not found.</main>;
+  const handleDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+
+    try {
+      // 1. Check access
+      const { data: { user } } = await supabase.auth.getUser();
+      if (asset.access_type === 'MONEY' && !user) {
+        alert('Please log in to purchase this asset.');
+        return;
+      }
+
+      // 2. Generate signed URL
+      const { data, error } = await supabase.storage
+        .from('master-assets')
+        .createSignedUrl(asset.master_file_path, 60);
+
+      if (error) throw error;
+
+      // 3. Trigger download
+      window.open(data.signedUrl, '_blank');
+
+      // 4. Update download count
+      await supabase
+        .from('images')
+        .update({ download_count: (asset.download_count || 0) + 1 })
+        .eq('id', id);
+
+      setAsset((prev: any) => ({ ...prev, download_count: (prev.download_count || 0) + 1 }));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to generate download link.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (loading) return <main className="min-h-screen p-12 mono">[ loading vault item... ]</main>;
+  if (!asset) return <main className="min-h-screen p-12 mono">[ asset not found ]</main>;
 
   return (
     <main className="min-h-screen p-6 md:p-12">
@@ -49,23 +86,25 @@ export default function AssetDetailPage() {
           <div className="flex flex-col gap-4">
             <div className="flex justify-between border-b border-[#dcdcd7] pb-2">
               <span className="font-['Space_Grotesk'] text-[#71716b]">File name</span>
-              <span className="font-['IBM_Plex_Mono'] text-[#0a0a0a]">{asset.title}.tiff</span>
+              <span className="font-['IBM_Plex_Mono'] text-[#0a0a0a]">{asset.title}.{asset.file_type || 'tiff'}</span>
             </div>
             <div className="flex justify-between border-b border-[#dcdcd7] pb-2">
               <span className="font-['Space_Grotesk'] text-[#71716b]">Dimensions</span>
-              <span className="font-['IBM_Plex_Mono'] text-[#0a0a0a]">4096x2160</span>
+              <span className="font-['IBM_Plex_Mono'] text-[#0a0a0a]">{asset.resolution || '4096x2160'}</span>
             </div>
             <div className="flex justify-between border-b border-[#dcdcd7] pb-2">
-              <span className="font-['Space_Grotesk'] text-[#71716b]">Format</span>
-              <span className="font-['IBM_Plex_Mono'] text-[#0a0a0a]">{asset.file_type || 'TIFF'}</span>
+              <span className="font-['Space_Grotesk'] text-[#71716b]">Downloads</span>
+              <span className="font-['IBM_Plex_Mono'] text-[#0a0a0a]">[ {asset.download_count || 0} ]</span>
             </div>
           </div>
 
           <button
+            onClick={handleDownload}
+            disabled={downloading}
             className="w-full mt-4 px-[18px] py-[11px] bg-[#0a0a0a] text-white font-['IBM_Plex_Mono'] text-[13.5px] font-medium tracking-wide"
             style={{ borderRadius: '2px' }}
           >
-            [ download_master_file ]
+            {downloading ? '[ generating... ]' : '[ download_master_file ]'}
           </button>
         </div>
       </div>

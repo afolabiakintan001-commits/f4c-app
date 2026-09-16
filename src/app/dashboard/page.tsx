@@ -71,6 +71,11 @@ export default function DashboardPage() {
           zIndex: 10,
         }}
       >
+        {!isCreator && (
+          <a href="/onboarding" style={{ display: 'block', background: 'var(--ink)', color: '#fff', textAlign: 'center', padding: '6px', fontSize: '11px', textDecoration: 'none' }} className="mono">
+            [ UNLOCK_PUBLISHING · CLAIM_CREATOR_HANDLE ]
+          </a>
+        )}
         <div className="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px', gap: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '19px', flex: '0 0 auto' }}>
             <span className="sq"></span>F4C

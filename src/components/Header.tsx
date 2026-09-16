@@ -74,10 +74,7 @@ export default function Header() {
               color: '#0a0a0a',
               letterSpacing: '-0.5px'
             }}>
-              F4CREATORS
-            </span>
-            <span style={{ fontSize: '10px', color: '#71716b', display: 'none' }}>
-              [ VAULT_INDEX ]
+              F4Creators
             </span>
           </Link>
 
@@ -88,20 +85,19 @@ export default function Header() {
             <Link 
               href="/submit" 
               style={{ 
-                border: '1px solid #0a0a0a',
+                border: '1px solid #dcdcd7',
                 padding: '6px 12px',
                 fontSize: '11px',
-                fontWeight: 700,
                 color: '#0a0a0a',
                 textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 background: '#ffffff',
+                fontFamily: 'var(--plex-mono)',
               }}
             >
-              <span>+</span>
-              <span>[ INDEX ASSET ]</span>
+              Index asset
             </Link>
 
             {/* Auth Session Controls */}
@@ -118,10 +114,10 @@ export default function Header() {
                     padding: '6px 10px',
                     fontSize: '11px',
                     cursor: 'pointer',
-                    fontFamily: 'inherit',
+                    fontFamily: 'var(--plex-mono)',
                   }}
                 >
-                  [ SIGNOUT ]
+                  Sign out
                 </button>
               </div>
             ) : (
@@ -134,10 +130,10 @@ export default function Header() {
                     padding: '6px 10px',
                     fontSize: '11px',
                     cursor: 'pointer',
-                    fontFamily: 'inherit',
+                    fontFamily: 'var(--plex-mono)',
                   }}
                 >
-                  LOGIN
+                  Login
                 </button>
                 <button
                   onClick={() => openAuth('SIGNUP')}
@@ -149,10 +145,10 @@ export default function Header() {
                     fontSize: '11px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontFamily: 'inherit',
+                    fontFamily: 'var(--plex-mono)',
                   }}
                 >
-                  [ REGISTER ]
+                  Register
                 </button>
               </div>
             )}
